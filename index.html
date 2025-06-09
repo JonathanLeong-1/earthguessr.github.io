@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarthGuessr</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #street-view {
+            width: 100%;
+            height: 100%;
+        }
+        #map {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        #map:hover {
+            width: 800px;
+            height: 600px;
+            cursor: pointer;
+        }
+        #round-results {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            border-radius: 12px;
+            z-index: 1001;
+            display: none;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            min-width: 400px;
+        }
+        #round-results .distance {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #round-results .points {
+            color: #B22222;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        #round-results .continue {
+            color: #666;
+            font-size: 24px;
+            font-style: italic;
+        }
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(178, 34, 34, 0.7); /* Slightly opaque dark red */
+            padding: 12px 24px;
+            border-radius: 20px;
+            z-index: 1000;
+            font-size: 22px;
+            font-weight: bold;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.2);
+            min-width: 140px;
+            text-align: center;
+            border: none;
+            color: #ffffff;
+        }
+        #round-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(178, 34, 34, 0.7); /* Slightly opaque dark red */
+            padding: 12px 24px;
+            border-radius: 20px;
+            z-index: 1000;
+            font-size: 22px;
+            font-weight: bold;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.2);
+            min-width: 140px;
+            text-align: center;
+            border: none;
+            color: #ffffff;
+        }
+        #game-over {
+            display: none;
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 50px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 2000;
+            text-align: center;
+            min-width: 400px;
+        }
+        #game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        #game-over p {
+            font-size: 32px;
+            margin-bottom: 30px;
+            color: #B22222;
+        }
+        #game-over button {
+            background-color: #B22222;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        #game-over button:hover {
+            background-color: #8B0000;
+        }
+        #api-key-warning {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+            text-align: center;
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+        }
+        #compass {
+            position: absolute;
+            bottom: 40px;
+            left: 30px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #compass-needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px; /* Skinny */
+            height: 55px; /* Longer, almost reaching the edge of the inner circle (60px diameter) */
+            background: linear-gradient(to top, #808080 50%, #ff0000 50%); /* Gray on top (North), Red on bottom (South) */
+            transform: translate(-50%, -50%); /* Centered, no rotation */
+            transform-origin: center center; /* Ensure rotation is from center */
+            border-radius: 2px; /* Slight rounding for needle ends */
+        }
+        #compass::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 2px solid #333;
+            border-radius: 50%;
+        }
+        #logo {
+            position: absolute;
+            top: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 70px; /* Adjust as needed */
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.3); /* Slightly more opaque dark background */
+            padding: 2px 5px;
+            border-radius: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="street-view"></div>
+        <div id="map"></div>
+        <img id="logo" src="logo.png" alt="Earth Guessr Logo">
+        <div id="compass">
+            <div id="compass-needle"></div>
+        </div>
+        <div id="round-results"></div>
+        <div id="score-display">Score: 0</div>
+        <div id="round-info">Round: 1/5</div>
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button onclick="startNewGame()">Play Again</button>
+        </div>
+        <div id="api-key-warning">
+            <h2>API Key Required</h2>
+            <p>Please replace 'YOUR_API_KEY' in index.html with your Google Maps API key.</p>
+            <p>Get your API key from: <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></p>
+        </div>
+        <div id="loading">Loading...</div>
+    </div>
+
+    <script>
+        // Check if API key is set
+        if (window.location.href.includes('YOUR_API_KEY')) {
+            document.getElementById('api-key-warning').style.display = 'block';
+        }
+
+        // Hide loading message when game is ready
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsi7bqDiy5UyasxfJdso9eb636PeTzEo8&libraries=places,geometry&callback=initGame" async defer onerror="alert('Error loading Google Maps API. Please check your API key and internet connection.')"></script>
+    <script src="game.js"></script>
+</body>
+</html> 
